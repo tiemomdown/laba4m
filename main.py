@@ -3,7 +3,12 @@ import math
 def converge(xk, xkp, n, eps):
     norm = sum((xk[i] - xkp[i]) ** 2 for i in range(n))
     return math.sqrt(norm) < eps
-
+def calculate_residual_vector(a, b, x, n):
+    residual = [0.0] * n
+    for i in range(n):
+        ax = sum(a[i][j] * x[j] for j in range(n))
+        residual[i] = b[i] - ax
+    return residual
 
 def round_to_eps(x, eps):
     precision = -math.log10(eps)
@@ -80,36 +85,51 @@ def gauss_method(a, b, n):
                     a[i], a[k] = a[k], a[i]
                     b[i], b[k] = b[k], b[i]
                     break
+
         for k in range(i + 1, n):
             factor = a[k][i] / a[i][i]
             for j in range(i, n):
                 a[k][j] -= factor * a[i][j]
             b[k] -= factor * b[i]
-    rank_a = rank_of_matrix(a)
-    augmented_matrix = [a[i] + [b[i]] for i in range(n)]
-    rank_augmented = rank_of_matrix(augmented_matrix)
-    if rank_a < rank_augmented:
-        print("Система несовместна (нет решений).")
-        return
-    if rank_a < n:
-        print("Система имеет бесконечно много решений.")
-        for i in range(rank_a, n):
-            free_variables.append(f"x{i + 1}")
-        print("Пример одного из решений:")
-        for i in range(rank_a):
-            x[i] = b[i] / a[i][i]
-            print(f"x{i + 1} = {x[i]}")
-        for var in free_variables:
-            print(f"{var} = любое значение")
-        return
-    for i in range(n - 1, -1, -1):
-        x[i] = b[i]
-        for j in range(i + 1, n):
-            x[i] -= a[i][j] * x[j]
-        x[i] /= a[i][i]
-    print("\nРешение методом Гаусса:")
+    print("Треугольная матрица: ")
+    for i in a:
+        for j in i:
+            if j < 1e-14:
+                j = 0
+            print(j, end=' ')
+        print()
+    not_comparable = True
     for i in range(n):
-        print(f"x{i + 1} = {x[i]}")
+        if a[i][i] == 0:
+            not_comparable = False
+            break
+    if (not not_comparable):
+        inconsistent = any(all(abs(a[i][j]) < 1e-9 for j in range(n)) and abs(b[i]) > 1e-9 for i in range(n))
+        if inconsistent:
+            print("Система несовместна (нет решений).")
+            return
+        else:
+            print("Система имеет бесконечно много решений.")
+            print("Пример одного из решений:")
+            for i in range(n):
+                x[i] = 0 if abs(a[i][i]) < 1e-9 else b[i] / a[i][i]
+            for i in range(n):
+                print(f"x{i + 1} = {x[i]}")
+            return
+    else:
+        for i in range(n - 1, -1, -1):
+            x[i] = b[i]
+            for j in range(i + 1, n):
+                x[i] -= a[i][j] * x[j]
+            x[i] /= a[i][i]
+
+        print("\nРешение методом Гаусса:")
+        for i in range(n):
+            print(f"x{i + 1} = {x[i]}")
+        residual = calculate_residual_vector(a, b, x, n)
+        print("\nВектор невязки:")
+        for i in range(n):
+            print(f"r{i + 1} = {residual[i]}")
 
 def seidel_method(a, b, n, eps):
     x = [0.0] * n
@@ -130,57 +150,34 @@ def seidel_method(a, b, n, eps):
     for i in range(n):
         print(f"x{i + 1} = {round_to_eps(x[i], eps)}")
     print(f"Количество итераций: {iterations}")
-def rank_of_matrix(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-    augmented_matrix = [row[:] for row in matrix]
-    rank = 0
-    for col in range(m):
-        pivot_row = None
-        for row in range(rank, n):
-            if augmented_matrix[row][col] != 0:
-                pivot_row = row
-                break
-        if pivot_row is None:
-            continue
-        augmented_matrix[rank], augmented_matrix[pivot_row] = augmented_matrix[pivot_row], augmented_matrix[rank]
-        pivot_value = augmented_matrix[rank][col]
-        for j in range(col, m):
-            augmented_matrix[rank][j] /= pivot_value
-        for i in range(n):
-            if i != rank:
-                factor = augmented_matrix[i][col]
-                for j in range(col, m):
-                    augmented_matrix[i][j] -= factor * augmented_matrix[rank][j]
-        rank += 1
-    return rank
-def check_solution_type(a, b, n):
-    augmented_matrix = [a[i] + [b[i]] for i in range(n)]
-    rank_a = rank_of_matrix(a)
-    rank_augmented = rank_of_matrix(augmented_matrix)
-    if rank_a < rank_augmented:
-        print("Система несовместна (нет решений).")
-    elif rank_a < n:
-        print("Система имеет бесконечно много решений.")
-    else:
-        print("Система имеет единственное решение.")
+    residual = calculate_residual_vector(a, b, x, n)
+    print("\nВектор невязки:")
+    for i in range(n):
+        print(f"r{i + 1} = {residual[i]}")
 def main():
     n = 3  # Размерность матрицы
     eps = 0.001  # Точность
     # Матрица и вектор из задания
+    # a = [
+    #     [9, 8, 7],
+    #     [6, 5, 4],
+    #     [3, 2, 1]
+    # ]
+    # b = [8, 5, 2]
     a = [
-        [9, 8, 7],
-        [6, 5, 4],
-        [3, 2, 1]
+        [3.1, 2.8, 1.9],
+        [1.9, 3.1, 2.1],
+        [7.5, 3.8, 4.8]
     ]
-    b = [8, 5, 3]
-    #check_solution_type(a,b,n)
-    #print("1. Метод Зейделя")
-    #seidel_method(a, b, n, eps)
-    print("2.",end ='')
+
+    b = [0.2, 2.1, 5.6]
+
+    print("1.",end ='')
     gauss_method(a, b, n)
-    #print("3.", end = '')
-    #cramer_method(a, b, n)
+    print("2.", end = '')
+    cramer_method(a, b, n)
+    print("3. Метод Зейделя")
+    seidel_method(a, b, n, eps)
 
 if __name__ == "__main__":
     main()
